@@ -23,11 +23,11 @@ jobs:
           poetry-version: 1.4
       - name: ⬇️ Python Dependencies
         run: poetry install
-      - name: 🏃 isort, black
+      - name: 🏃 autoflake, isort, black
         run: |
-          autoflake -ir $(find -iname "*.py" ! -name __init__.py) --remove-all-unused-imports
-          isort --profile black .
-          black .
+          poetry run autoflake -ir $(find -iname "*.py" ! -name __init__.py) --remove-all-unused-imports
+          poetry run isort --profile black .
+          poetry run black .
 
       # Add and commit all
       - name: ⬆️ Add and Commit
