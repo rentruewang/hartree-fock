@@ -27,12 +27,12 @@ class Ortho(ABC):
         assert checks.symmetric(S)
 
         # s is guarenteed to be > 0 because it's positive definite.
-        s, U = linalg.eigh(S)
+        s, U = linalg.eig(S)
 
         # Perform diagonalization using different strategies.
         X = self.diagonalize(s, U)
 
-        assert np.allclose(X.T @ U @ X, np.eye(X.shape[1]))
+        assert np.allclose(X.T @ S @ X, np.eye(X.shape[1])), S
 
         return X
 
@@ -49,3 +49,15 @@ class Symmetric(Ortho):
 class Canonical(Ortho):
     def diagonalize(self, s: NDArray, U: NDArray) -> NDArray:
         return U @ np.diag(s**-0.5)
+
+
+def get(name: str) -> Ortho:
+    match name:
+        case "symmetric":
+            return Symmetric()
+        case "canonical":
+            return Canonical()
+        case _:
+            raise ValueError(
+                "Invalid argument. Should be one of `symmetric` or `canonical`"
+            )

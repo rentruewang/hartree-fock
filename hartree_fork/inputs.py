@@ -1,13 +1,14 @@
+import itertools
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
-from numba import jit
 from numpy import ndarray
 from numpy.typing import NDArray
+from numpy import float64
 from typing_extensions import Self
-import itertools
+
 from . import checks
 
 
@@ -30,6 +31,11 @@ class HFInput:
     converge: float
     """
     The threshold below which the program deems to have converged.
+    """
+
+    iterations: int
+    """
+    The maximum iterations to run.
     """
 
     vnn: float
@@ -62,6 +68,11 @@ class HFInput:
     4D matrix because there are 4 parameters (uses Yoshimine sort).
     """
 
+    orthogonalizer: Literal["symmetric", "canonical"]
+    """
+    Type of orthogonalizer used. Can be symmetric or canonical.
+    """
+
     def __post_init__(self):
         assert isinstance(self.orbitals, int)
         assert isinstance(self.vnn, float)
@@ -74,6 +85,7 @@ class HFInput:
         assert self.potential.ndim == 2, self.potential.ndim
         assert self.overlap.ndim == 2, self.overlap.ndim
         assert self.ijkl.ndim == 4, self.ijkl.ndim
+        assert self.orthogonalizer in ["symmetric", "canonical"]
 
         assert (
             self.orbitals
@@ -83,26 +95,30 @@ class HFInput:
         )
 
     @staticmethod
-    def make_symmetric(mat: NDArray):
+    def make_symmetric(mat: NDArray[float64]):
+        if checks.symmetric(mat):
+            return mat
+
         assert checks.square(mat)
         return mat + mat.T - mat.diagonal()
 
     @staticmethod
-    @jit
-    def yoshimine(x: int, y: int):
+    def yoshimine(x: int, y: int) -> int:
         if x < y:
             x, y = y, x
-        return x * (x + 1) / 2 + y
+        return x * (x + 1) // 2 + y
 
     @staticmethod
-    @jit
     def yoshimine_4(a: int, b: int, c: int, d: int) -> int:
         ab = HFInput.yoshimine(a, b)
         cd = HFInput.yoshimine(c, d)
         abcd = HFInput.yoshimine(ab, cd)
         return abcd
 
-    def from_yoshimine(self, raw_data: list[tuple[tuple[int, int, int, int], float]]):
+    @staticmethod
+    def from_yoshimine(
+        raw_data: list[tuple[tuple[int, int, int, int], float]], orbitals: int
+    ):
         indices = [tuple(r[0]) for r in raw_data]
         values = [float(r[1]) for r in raw_data]
 
@@ -111,13 +127,13 @@ class HFInput:
         # are equal, hash them with yoshimine.
 
         yoshimine_dict = {
-            HFInput.yoshimine_4(idx): val for (idx, val) in zip(indices, values)
+            HFInput.yoshimine_4(*idx): val for (idx, val) in zip(indices, values)
         }
 
-        mat = np.zeros(shape=[self.orbitals] * 4)
+        mat = np.zeros(shape=[orbitals] * 4)
 
-        for i, j, k, l in itertools.product(*([range(self.orbitals)] * 4)):
-            yoshimine = self.yoshimine_4(i, j, k, l)
+        for i, j, k, l in itertools.product(*([range(orbitals)] * 4)):
+            yoshimine = HFInput.yoshimine_4(i, j, k, l)
             mat[i, j, k, l] = yoshimine_dict[yoshimine]
 
         return mat
@@ -126,14 +142,17 @@ class HFInput:
     def parse(cls, fname: str) -> Self:
         with open(fname) as f:
             data = json.load(f)
+        orbitals = int(data["orbitals"])
 
         return cls(
-            orbitals=int(data["orbitals"]),
+            orbitals=orbitals,
             electrons=int(data["electrons"]),
             converge=float(data["converge"]),
+            iterations=int(data["iterations"]),
             vnn=float(data["vnn"]),
             kinetic=cls.make_symmetric(np.array(data["kinetic"])),
             potential=cls.make_symmetric(np.array(data["potential"])),
             overlap=cls.make_symmetric(np.array(data["overlap"])),
-            ijkl=cls.from_yoshimine(data["ijkl"]),
+            ijkl=cls.from_yoshimine(data["ijkl"], orbitals),
+            orthogonalizer=data["orthogonalizer"],
         )
