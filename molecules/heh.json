@@ -1,9 +1,8 @@
 {
-    "converge": 1e-6,
+    "converge": 1e-12,
     "orbitals": 2,
     "electrons": 2,
     "iterations": 100,
-    "orthogonalizer": "canonical",
     "vnn": 1.3230,
     "kinetic": [
         [

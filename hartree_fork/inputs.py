@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
-from numpy import ndarray
+from numpy import float64, ndarray
 from numpy.typing import NDArray
-from numpy import float64
 from typing_extensions import Self
 
 from . import checks
@@ -68,11 +67,6 @@ class HFInput:
     4D matrix because there are 4 parameters (uses Yoshimine sort).
     """
 
-    orthogonalizer: Literal["symmetric", "canonical"]
-    """
-    Type of orthogonalizer used. Can be symmetric or canonical.
-    """
-
     def __post_init__(self):
         assert isinstance(self.orbitals, int)
         assert isinstance(self.vnn, float)
@@ -85,7 +79,6 @@ class HFInput:
         assert self.potential.ndim == 2, self.potential.ndim
         assert self.overlap.ndim == 2, self.overlap.ndim
         assert self.ijkl.ndim == 4, self.ijkl.ndim
-        assert self.orthogonalizer in ["symmetric", "canonical"]
 
         assert (
             self.orbitals
@@ -154,5 +147,4 @@ class HFInput:
             potential=cls.make_symmetric(np.array(data["potential"])),
             overlap=cls.make_symmetric(np.array(data["overlap"])),
             ijkl=cls.from_yoshimine(data["ijkl"], orbitals),
-            orthogonalizer=data["orthogonalizer"],
         )

@@ -1,0 +1,40 @@
+name: Format
+on: [push]
+jobs:
+  format-all:
+    runs-on: ubuntu-latest
+    steps:
+      # Global part
+      - name: 🔔 Check out
+        uses: actions/checkout@v3
+
+      # Python part
+      - name: 🏗️ python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - name: ⬇️ Virtual Environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+      - name: ⬇️ Python Poetry
+        uses: abatilo/actions-poetry@v2
+        with:
+          poetry-version: 1.4
+      - name: ⬇️ Python Dependencies
+        run: poetry install
+      - name: 🏃 isort, black
+        run: |
+          autoflake -ir $(find -iname "*.py" ! -name __init__.py) --remove-all-unused-imports
+          isort --profile black .
+          black .
+
+      # Add and commit all
+      - name: ⬆️ Add and Commit
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: "github-actions[bot]"
+          author_email: "github-actions[bot]@users.noreply.github.com"
+          message: "🤖 RenTrueWang thinks you forgot to format your code!"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
