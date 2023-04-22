@@ -161,3 +161,6 @@ cython_debug/
 
 # I use VSCode
 /.vscode/
+
+# Outputs of hydra should be ignored.
+/outputs/
