@@ -1,7 +1,6 @@
 import itertools
 import json
 from dataclasses import dataclass
-from typing import Any, Literal
 
 import numpy as np
 from numpy import float64, ndarray

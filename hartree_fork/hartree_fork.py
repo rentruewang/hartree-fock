@@ -1,6 +1,6 @@
 import alive_progress
 import numpy as np
-from numpy import float64, linalg
+from numpy import linalg
 from numpy.typing import NDArray
 
 from . import checks
