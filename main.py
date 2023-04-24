@@ -1,16 +1,27 @@
+from pathlib import Path
+
 import rich
 from hydra import main
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 import hartree_fork
-from hartree_fork import HFInput
+from hartree_fork import HFInput, paths
 
 
-@main(version_base=None, config_path="conf")
+def make_yaml(fname: str):
+    if not fname.endswith(".yaml"):
+        fname = f"{fname}.yaml"
+    return fname
+
+
+@main(version_base=None, config_path=paths.CONF, config_name="main")
 def run(cfg: DictConfig):
+    molecule = cfg["molecule"]
+    cfg = OmegaConf.load(Path(paths.CONF) / make_yaml(cfg["molecule"]))
+
     rich.print(cfg)
 
-    hf_input = HFInput.from_config(cfg)
+    hf_input = HFInput.from_config(molecule, cfg)
     energy = hartree_fork.run(hf_input)
 
     rich.print(f"Hartree Fock energy: {energy} (Hartree)")

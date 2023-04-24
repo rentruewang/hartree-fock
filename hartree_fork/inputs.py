@@ -8,7 +8,8 @@ from numpy.typing import NDArray
 from omegaconf import DictConfig
 from typing_extensions import Self
 
-from . import checks
+from . import checks, paths
+from .paths import skip_if_none
 
 
 @dataclass(frozen=True)
@@ -17,14 +18,10 @@ class HFInput:
     HartreeForkInput is the input terms of the HF algorithm.
     """
 
-    orbitals: int
-    """
-    The number of orbitals. This is equal to the dimension of the matrices.
-    """
-
     electrons: int
     """
-    The number of electrons in the system.
+    The number of electrons/orbitals in the system.
+    This is equal to the dimension of the matrices.
     """
 
     converge: float
@@ -61,19 +58,29 @@ class HFInput:
     2D matrix because this is the overlap between matrices.
     """
 
-    ijkl: NDArray
+    density_init: NDArray | None
+    """
+    The initial density matrix.
+    If None, zeros would be used.
+    """
+
+    ijkl: NDArray | None
     """
     The (ij|kl) integral terms (used for Coulomb and exchange).
     4D matrix because there are 4 parameters (uses Yoshimine sort).
     """
 
     def __post_init__(self):
-        assert isinstance(self.orbitals, int)
+        assert isinstance(self.electrons, int)
         assert isinstance(self.vnn, float)
         assert isinstance(self.kinetic, ndarray)
         assert isinstance(self.potential, ndarray)
         assert isinstance(self.overlap, ndarray)
-        assert isinstance(self.ijkl, ndarray)
+
+        assert len(set(self.kinetic.shape)) == 1, self.kinetic.shape
+        assert len(set(self.potential.shape)) == 1, self.potential.shape
+        assert len(set(self.overlap.shape)) == 1, self.overlap.shape
+        assert len(set(self.ijkl.shape)) == 1, self.ijkl.shape
 
         assert self.kinetic.ndim == 2, self.kinetic.ndim
         assert self.potential.ndim == 2, self.potential.ndim
@@ -81,11 +88,18 @@ class HFInput:
         assert self.ijkl.ndim == 4, self.ijkl.ndim
 
         assert (
-            self.orbitals
+            self.electrons
             == len(self.kinetic)
             == len(self.potential)
             == len(self.overlap)
+            == len(self.ijkl)
         )
+
+    @staticmethod
+    @skip_if_none
+    def parse_txt_to_symmetric(fname: Path):
+        mat = np.loadtxt(fname)
+        return HFInput.make_symmetric(mat)
 
     @staticmethod
     def make_symmetric(mat: NDArray[float64]):
@@ -109,44 +123,60 @@ class HFInput:
         return abcd
 
     @staticmethod
-    def from_yoshimine(
-        raw_data: list[tuple[tuple[int, int, int, int], float]], orbitals: int
-    ):
-        # FIXME: this doesn't work with the new version.
-        indices = [tuple(r[0]) for r in raw_data]
-        values = [float(r[1]) for r in raw_data]
-
+    def from_yoshimine(mapping: dict[tuple[int, int, int, int], float], orbitals: int):
         # Since all of the following permutations
         # (ab|cd) (ba|cd) (ab|dc) (ba|dc) (cd|ab) (cd|ba) (dc|ab) (dc|ba)
         # are equal, hash them with yoshimine.
 
         yoshimine_dict = {
-            HFInput.yoshimine_4(*idx): val for (idx, val) in zip(indices, values)
+            HFInput.yoshimine_4(*tuple_4): val for (tuple_4, val) in mapping.items()
         }
 
         mat = np.zeros(shape=[orbitals] * 4)
 
-        for i, j, k, l in itertools.product(*([range(orbitals)] * 4)):
+        for i, j, k, l in itertools.product(*[range(orbitals) for _ in range(4)]):
             yoshimine = HFInput.yoshimine_4(i, j, k, l)
             mat[i, j, k, l] = yoshimine_dict[yoshimine]
 
         return mat
 
-    @classmethod
-    def from_config(cls, cfg: DictConfig) -> Self:
-        molecule = cfg["molecule"]
-        orbitals = int(cfg["orbitals"])
+    @staticmethod
+    @skip_if_none
+    def parse_ijkl(fname: str) -> dict[tuple[int, int, int, int], float]:
+        with open(fname) as f:
+            data = f.readlines()
 
-        data_path = Path("molecules") / molecule
+        result = {}
+        for line in data:
+            i, j, k, l, val = map(float, line.split())
+            i, j, k, l = map(int, [i, j, k, l])
+            result[i, j, k, l] = val
+        return result
+
+    @classmethod
+    def from_config(cls, name: str, cfg: DictConfig) -> Self:
+        orbitals = int(cfg["electrons"])
+
+        data_path = Path(paths.DATA) / name
 
         return cls(
-            orbitals=int(cfg["orbitals"]),
-            electrons=int(cfg["electrons"]),
+            electrons=orbitals,
             converge=float(cfg["converge"]),
             iterations=int(cfg["iterations"]),
             vnn=float(cfg["vnn"]),
-            kinetic=cls.make_symmetric(np.loadtxt(data_path / "kinetic.txt")),
-            potential=cls.make_symmetric(np.loadtxt(data_path / "potential.txt")),
-            overlap=cls.make_symmetric(np.loadtxt(data_path / "overlap.txt")),
-            ijkl=cls.from_yoshimine(np.loadtxt(data_path / "kinetic.txt")),
+            kinetic=cls.parse_txt_to_symmetric(
+                paths.exist_or_none(data_path / "kinetic.txt")
+            ),
+            potential=cls.parse_txt_to_symmetric(
+                paths.exist_or_none(data_path / "potential.txt")
+            ),
+            overlap=cls.parse_txt_to_symmetric(
+                paths.exist_or_none(data_path / "overlap.txt")
+            ),
+            density_init=cls.parse_txt_to_symmetric(
+                paths.exist_or_none(data_path / "density.txt")
+            ),
+            ijkl=cls.from_yoshimine(
+                cls.parse_ijkl(paths.exist_or_none(data_path / "ijkl.txt")), orbitals
+            ),
         )

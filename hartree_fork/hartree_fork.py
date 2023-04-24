@@ -38,7 +38,7 @@ def orthogonalize(S: NDArray) -> NDArray:
     return X
 
 
-def density(C: NDArray, electrons: int):
+def density(C: NDArray, N: int):
     """
     Computes the density matrix D where
     D_uv = Sum_i C_ui C_vi, i <= electrons / 2
@@ -49,7 +49,7 @@ def density(C: NDArray, electrons: int):
     C:
         The coefficient matrix.
 
-    electrons:
+    N:
         The number of electrons (electrons / 2 is the number of occuppied orbitals).
 
     Returns
@@ -59,7 +59,7 @@ def density(C: NDArray, electrons: int):
     """
 
     assert checks.square(C)
-    occupied = C[:, : electrons // 2]
+    occupied = C[:, : N // 2]
 
     return np.einsum("ui,vi->uv", occupied, occupied)
 
@@ -83,7 +83,7 @@ def energy(D: NDArray, H: NDArray, F: NDArray) -> float:
 
 def hartree_fork(hf_input: HFInput) -> float:
     # Number of orbitals.
-    N = hf_input.orbitals
+    N = hf_input.electrons
 
     # Hamiltonian.
     H = hf_input.kinetic + hf_input.potential
@@ -94,15 +94,15 @@ def hartree_fork(hf_input: HFInput) -> float:
     # The overlap matrix.
     S = hf_input.overlap
 
-    # Density is initialized to 0
-    D = np.zeros(shape=[N, N])
+    # Density is initialized to 0 if it's not provided.
+    if (D := hf_input.density_init) is None:
+        D = np.zeros(shape=[N, N])
 
     # N-N repulsion energy
     vnn = hf_input.vnn
 
     threshold = hf_input.converge
     iterations = hf_input.iterations
-    electrons = hf_input.electrons
 
     # orthogonalizer = ortho.get("canonical")
 
@@ -124,7 +124,7 @@ def hartree_fork(hf_input: HFInput) -> float:
             (_, Cp) = linalg.eig(Fp)
             C = X @ Cp
 
-            D_new = density(C, electrons)
+            D_new = density(C, N)
 
             # Check difference in density
             if ((D - D_new) ** 2).sum() < threshold:
