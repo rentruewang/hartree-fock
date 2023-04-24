@@ -1,5 +1,5 @@
-from typing import Callable, TypeVar
 from pathlib import Path
+from typing import Callable, TypeVar
 
 CONF = "conf"
 DATA = "data"
