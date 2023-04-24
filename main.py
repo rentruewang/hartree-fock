@@ -6,12 +6,11 @@ import hartree_fork
 from hartree_fork import HFInput
 
 
-@main(version_base=None, config_path="conf", config_name="main")
+@main(version_base=None, config_path="conf")
 def run(cfg: DictConfig):
     rich.print(cfg)
 
-    molecule = cfg["molecule"]
-    hf_input = HFInput.parse(molecule)
+    hf_input = HFInput.from_config(cfg)
     energy = hartree_fork.run(hf_input)
 
     rich.print(f"Hartree Fock energy: {energy} (Hartree)")

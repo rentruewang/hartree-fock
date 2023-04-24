@@ -1,10 +1,11 @@
 import itertools
-import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from numpy import float64, ndarray
 from numpy.typing import NDArray
+from omegaconf import DictConfig
 from typing_extensions import Self
 
 from . import checks
@@ -111,6 +112,7 @@ class HFInput:
     def from_yoshimine(
         raw_data: list[tuple[tuple[int, int, int, int], float]], orbitals: int
     ):
+        # FIXME: this doesn't work with the new version.
         indices = [tuple(r[0]) for r in raw_data]
         values = [float(r[1]) for r in raw_data]
 
@@ -131,19 +133,20 @@ class HFInput:
         return mat
 
     @classmethod
-    def parse(cls, fname: str) -> Self:
-        with open(fname) as f:
-            data = json.load(f)
-        orbitals = int(data["orbitals"])
+    def from_config(cls, cfg: DictConfig) -> Self:
+        molecule = cfg["molecule"]
+        orbitals = int(cfg["orbitals"])
+
+        data_path = Path("molecules") / molecule
 
         return cls(
-            orbitals=orbitals,
-            electrons=int(data["electrons"]),
-            converge=float(data["converge"]),
-            iterations=int(data["iterations"]),
-            vnn=float(data["vnn"]),
-            kinetic=cls.make_symmetric(np.array(data["kinetic"])),
-            potential=cls.make_symmetric(np.array(data["potential"])),
-            overlap=cls.make_symmetric(np.array(data["overlap"])),
-            ijkl=cls.from_yoshimine(data["ijkl"], orbitals),
+            orbitals=int(cfg["orbitals"]),
+            electrons=int(cfg["electrons"]),
+            converge=float(cfg["converge"]),
+            iterations=int(cfg["iterations"]),
+            vnn=float(cfg["vnn"]),
+            kinetic=cls.make_symmetric(np.loadtxt(data_path / "kinetic.txt")),
+            potential=cls.make_symmetric(np.loadtxt(data_path / "potential.txt")),
+            overlap=cls.make_symmetric(np.loadtxt(data_path / "overlap.txt")),
+            ijkl=cls.from_yoshimine(np.loadtxt(data_path / "kinetic.txt")),
         )
