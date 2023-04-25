@@ -14,7 +14,7 @@ def exist_or_none(path: Path) -> Path | None:
     return path
 
 
-def skip_if_none(function: Callable[[T], R]) -> Callable[[T], R]:
+def skip_if_none(function: Callable[[T], R]) -> Callable[[T | None], R | None]:
     def _func(param: T | None) -> R | None:
         if param is None:
             return None

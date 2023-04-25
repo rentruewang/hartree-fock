@@ -64,7 +64,7 @@ class HFInput:
     If None, zeros would be used.
     """
 
-    ijkl: NDArray | None
+    ijkl: NDArray
     """
     The (ij|kl) integral terms (used for Coulomb and exchange).
     4D matrix because there are 4 parameters (uses Yoshimine sort).
@@ -96,7 +96,6 @@ class HFInput:
         )
 
     @staticmethod
-    @skip_if_none
     def parse_txt_to_symmetric(fname: Path):
         mat = np.loadtxt(fname)
         return HFInput.make_symmetric(mat)
@@ -141,8 +140,7 @@ class HFInput:
         return mat
 
     @staticmethod
-    @skip_if_none
-    def parse_ijkl(fname: str) -> dict[tuple[int, int, int, int], float]:
+    def parse_ijkl(fname: str | Path) -> dict[tuple[int, int, int, int], float]:
         with open(fname) as f:
             data = f.readlines()
 
@@ -164,19 +162,11 @@ class HFInput:
             converge=float(cfg["converge"]),
             iterations=int(cfg["iterations"]),
             vnn=float(cfg["vnn"]),
-            kinetic=cls.parse_txt_to_symmetric(
-                paths.exist_or_none(data_path / "kinetic.txt")
-            ),
-            potential=cls.parse_txt_to_symmetric(
-                paths.exist_or_none(data_path / "potential.txt")
-            ),
-            overlap=cls.parse_txt_to_symmetric(
-                paths.exist_or_none(data_path / "overlap.txt")
-            ),
-            density_init=cls.parse_txt_to_symmetric(
+            kinetic=cls.parse_txt_to_symmetric(data_path / "kinetic.txt"),
+            potential=cls.parse_txt_to_symmetric(data_path / "potential.txt"),
+            overlap=cls.parse_txt_to_symmetric(data_path / "overlap.txt"),
+            density_init=skip_if_none(cls.parse_txt_to_symmetric)(
                 paths.exist_or_none(data_path / "density.txt")
             ),
-            ijkl=cls.from_yoshimine(
-                cls.parse_ijkl(paths.exist_or_none(data_path / "ijkl.txt")), orbitals
-            ),
+            ijkl=cls.from_yoshimine(cls.parse_ijkl(data_path / "ijkl.txt"), orbitals),
         )

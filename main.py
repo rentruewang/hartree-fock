@@ -1,3 +1,4 @@
+import typing
 from pathlib import Path
 
 import rich
@@ -17,7 +18,9 @@ def make_yaml(fname: str):
 @main(version_base=None, config_path=paths.CONF, config_name="main")
 def run(cfg: DictConfig):
     molecule = cfg["molecule"]
-    cfg = OmegaConf.load(Path(paths.CONF) / make_yaml(cfg["molecule"]))
+    cfg = typing.cast(
+        DictConfig, OmegaConf.load(Path(paths.CONF) / make_yaml(cfg["molecule"]))
+    )
 
     rich.print(cfg)
 
