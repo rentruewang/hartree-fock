@@ -121,7 +121,7 @@ def hartree_fork(hf_input: HFInput) -> float:
             Fp = X.T @ F @ X
 
             # Cp: C', since F'C' = eC', C' is the eigen vectors of F', C=XC'
-            (_, Cp) = linalg.eig(Fp)
+            _, Cp = linalg.eig(Fp)
             C = X @ Cp
 
             D_new = density(C, N)
