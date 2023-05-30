@@ -128,7 +128,7 @@ class HFInput:
         # are equal, hash them with yoshimine.
 
         yoshimine_dict = {
-            HFInput.yoshimine_4(*tuple_4): val for (tuple_4, val) in mapping.items()
+            HFInput.yoshimine_4(*tuple_4): val for tuple_4, val in mapping.items()
         }
 
         mat = np.zeros(shape=[orbitals] * 4)
