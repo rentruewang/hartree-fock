@@ -1,8 +1,8 @@
 import typing
 from pathlib import Path
 
+import hydra
 import rich
-from hydra import main
 from omegaconf import DictConfig, OmegaConf
 
 import hartree_fork
@@ -15,7 +15,7 @@ def make_yaml(fname: str):
     return fname
 
 
-@main(version_base=None, config_path=paths.CONF, config_name="main")
+@hydra.main(version_base=None, config_path=paths.CONF, config_name="main")
 def run(cfg: DictConfig):
     molecule = cfg["molecule"]
     cfg = typing.cast(
