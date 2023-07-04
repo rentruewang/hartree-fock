@@ -10,19 +10,15 @@ jobs:
       - name: 🏗️ python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10.6"
+          python-version: "3.10"
+
       - name: ⬇️ Python Poetry
         uses: abatilo/actions-poetry@v2
         with:
-          poetry-version: "1.4.1"
-      - name: ⬇️ Python Dependencies
-        run: poetry install --only main
+          poetry-version: "1.5"
 
-      - name: 🏗️ node
-        uses: actions/setup-node@v2
-        with:
-          node-verion: 18
-      - name: ⬇️ all packages
-        run: npm install
+      - name: ⬇️ Python Dependencies
+        run: poetry install
+
       - name: 🏃 pyright
-        run: poetry run npx pyright
+        uses: jakebailey/pyright-action@v1
