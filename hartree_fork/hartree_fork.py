@@ -1,4 +1,4 @@
-import alive_progress
+import alive_progress as prog
 import numpy as np
 from numpy import linalg
 from numpy.typing import NDArray
@@ -108,7 +108,7 @@ def hartree_fork(hf_input: HFInput) -> float:
 
     E = 0
 
-    with alive_progress.alive_bar(iterations) as bar:
+    with prog.alive_bar(iterations) as bar:
         for _ in range(iterations):
             bar()
 
