@@ -1,5 +1,5 @@
+import dataclasses as dcls
 import itertools
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -12,7 +12,7 @@ from . import checks, paths
 from .paths import skip_if_none
 
 
-@dataclass(frozen=True)
+@dcls.dataclass(frozen=True)
 class HFInput:
     """
     HartreeForkInput is the input terms of the HF algorithm.
